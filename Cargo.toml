@@ -1,6 +1,6 @@
 [package]
 name = "rawloader"
-version = "0.37.0"
+version = "0.37.1"
 authors = ["Pedro Côrte-Real <pedro@pedrocr.net>"]
 description = "A library to extract the data from camera raw formats"
 documentation = "https://docs.rs/rawloader/"
@@ -22,7 +22,7 @@ rayon = "1"
 [build-dependencies]
 glob = "0.3"
 toml = "0.5"
-rustc_version = "0.3"
+rustc_version = "0.4"
 
 [profile.release]
 panic = "unwind"
