@@ -294,6 +294,21 @@ pub fn decode_14be_unpacked(buf: &[u8], width: usize, height: usize, dummy: bool
   }))
 }
 
+pub fn decode_14be(buf: &[u8], width: usize, height: usize, dummy: bool) -> Vec<u16> {
+  decode_threaded(width, height, dummy,&(|out: &mut [u16], row| {
+    let inb = &buf[(row*width*14/8)..];
+    for (o, i) in out.chunks_exact_mut(4).zip(inb.chunks_exact(7)) {
+      if let &[i1, i2, i3, i4, i5, i6, i7] = i {
+        let mut in64 = u64::from_be_bytes([0, i1, i2, i3, i4, i5, i6, i7]);
+        for res in o.iter_mut().rev() {
+          *res = (in64 & 0b0011111111111111) as u16;
+          in64 >>= 14;
+        }
+      }
+    }
+  }))
+}
+
 pub fn decode_16le(buf: &[u8], width: usize, height: usize, dummy: bool) -> Vec<u16> {
   decode_threaded(width, height, dummy,&(|out: &mut [u16], row| {
     let inb = &buf[(row*width*2)..];
