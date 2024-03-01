@@ -4,6 +4,7 @@ use std::fs::File;
 use std::panic;
 use std::path::Path;
 use toml::Value;
+use crate::decoders::exif::*;
 
 macro_rules! fetch_tag {
   ($tiff:expr, $tag:expr) => (
@@ -66,7 +67,7 @@ mod packed;
 mod pumps;
 mod ljpeg;
 pub mod cfa;
-mod tiff;
+pub mod tiff;
 mod ciff;
 mod mrw;
 mod arw;
@@ -91,6 +92,7 @@ mod nrw;
 mod cr2;
 mod ari;
 mod x3f;
+pub mod exif;
 use self::tiff::*;
 pub use self::image::*;
 mod unwrapped;
@@ -324,20 +326,24 @@ impl Orientation {
   }
 }
 
-pub fn ok_image(camera: Camera, width: usize, height: usize, wb_coeffs: [f32;4], image: Vec<u16>) -> Result<RawImage,String> {
-  Ok(RawImage::new(camera, width, height, wb_coeffs, image, false))
-}
-
-pub fn ok_image_with_blacklevels(camera: Camera, width: usize, height: usize, wb_coeffs: [f32;4], blacks: [u16;4], image: Vec<u16>) -> Result<RawImage,String> {
-  let mut img = RawImage::new(camera, width, height, wb_coeffs, image, false);
-  img.blacklevels = blacks;
+pub fn ok_image(camera: Camera, width: usize, height: usize, wb_coeffs: [f32;4], image: Vec<u16>, exif: Option<Box<dyn ExifInfo>>) -> Result<RawImage,String> {
+  let mut img = RawImage::new(camera, width, height, wb_coeffs, image);
+  img.exif = exif;
   Ok(img)
 }
 
-pub fn ok_image_with_black_white(camera: Camera, width: usize, height: usize, wb_coeffs: [f32;4], black: u16, white: u16, image: Vec<u16>) -> Result<RawImage,String> {
-  let mut img = RawImage::new(camera, width, height, wb_coeffs, image, false);
+pub fn ok_image_with_blacklevels(camera: Camera, width: usize, height: usize, wb_coeffs: [f32;4], blacks: [u16;4], image: Vec<u16>, exif: Option<Box<dyn ExifInfo>>) -> Result<RawImage,String> {
+  let mut img = RawImage::new(camera, width, height, wb_coeffs, image);
+  img.blacklevels = blacks;
+  img.exif = exif;
+  Ok(img)
+}
+
+pub fn ok_image_with_black_white(camera: Camera, width: usize, height: usize, wb_coeffs: [f32;4], black: u16, white: u16, image: Vec<u16>, exif: Option<Box<dyn ExifInfo>>) -> Result<RawImage,String> {
+  let mut img = RawImage::new(camera, width, height, wb_coeffs, image);
   img.blacklevels = [black, black, black, black];
   img.whitelevels = [white, white, white, white];
+  img.exif = exif;
   Ok(img)
 }
 
@@ -376,7 +382,7 @@ impl RawLoader {
       camnames.push((cam.model.clone(), cam.clean_model.clone()));
       if let Some(val) = ct.get("model_aliases") {
         for alias in val.as_array().unwrap() {
-          camnames.push((alias[0].as_str().unwrap().to_string().clone(), 
+          camnames.push((alias[0].as_str().unwrap().to_string().clone(),
                          alias[1].as_str().unwrap().to_string().clone()));
         }
       }

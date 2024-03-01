@@ -146,7 +146,7 @@ impl<'a> Decoder for Cr2Decoder<'a> {
     };
 
     let wb = self.get_wb(&camera)?;
-    let mut img = RawImage::new(camera, width, height, wb, image, dummy);
+    let mut img = RawImage::new(camera, width, height, wb, image);
     if cpp == 3 {
       img.cpp = 3;
       img.width /= 3;
@@ -154,6 +154,7 @@ impl<'a> Decoder for Cr2Decoder<'a> {
       img.blacklevels = [0,0,0,0];
       img.whitelevels = [65535,65535,65535,65535];
     }
+    img.exif = Some(NativeExifInfo::new(&self.tiff));
     Ok(img)
   }
 }

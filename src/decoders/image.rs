@@ -38,6 +38,25 @@ pub struct RawImage {
 
   /// orientation of the image as indicated by the image metadata
   pub orientation: Orientation,
+
+  /// Exif data. Supported only for some camera models
+  /// ## Example
+  /// ```no_run
+  /// fn main() {
+  ///   let raw = rawloader::decode_file("some_file.dng").unwrap();
+  ///   if let Some(exif) = raw.exif {
+  ///     let iso = exif.get_uint(rawloader::Tag::ISOSpeed).unwrap();
+  ///     println!("ISO = {}", iso);
+  ///     let exp_time = exif.get_rational(rawloader::Tag::ExposureTime).unwrap();
+  ///     println!("Exposure time = {} seconds", exp_time);
+  ///     for tag in exif.get_tags() {
+  ///       println!("{:?} = {}", tag, exif.to_string(tag).unwrap());
+  ///     }
+  ///   }
+  /// }
+  /// ```
+  pub exif: Option<Box<dyn ExifInfo>>,
+
   /// image data itself, has `width`\*`height`\*`cpp` elements
   pub data: RawImageData,
 }
@@ -52,8 +71,8 @@ pub enum RawImageData {
 }
 
 impl RawImage {
-  #[doc(hidden)] pub fn new(camera: Camera, width: usize, height: usize, wb_coeffs: [f32;4], image: Vec<u16>, dummy: bool) -> RawImage {
-    let blacks = if !dummy && (camera.blackareah.1 != 0 || camera.blackareav.1 != 0) {
+  #[doc(hidden)] pub fn new(camera: Camera, width: usize, height: usize, wb_coeffs: [f32;4], image: Vec<u16>) -> RawImage {
+    let blacks = if image.len() > 1 && (camera.blackareah.1 != 0 || camera.blackareav.1 != 0) {
       let mut avg = [0 as f32; 4];
       let mut count = [0 as f32; 4];
       for row in camera.blackareah.0 .. camera.blackareah.0+camera.blackareah.1 {
@@ -108,6 +127,7 @@ impl RawImage {
       crops: camera.crops,
       blackareas: blackareas,
       orientation: camera.orientation,
+      exif: None,
     }
   }
 
